@@ -14,9 +14,9 @@ import {
   formatTimeAgo,
   showToast,
   copyText
-} from './utils.js?v=35';
-import { isDbReady, getDb, getDomains } from './db/index.js?v=35';
-import History, { ShortStore } from './storage.js?v=35';
+} from './utils.js?v=32';
+import { isDbReady, getDb, getDomains } from './db/index.js?v=32';
+import History, { ShortStore } from './storage.js?v=32';
 
 export function renderGenerator(container) {
   var domain = getDomain();
@@ -320,73 +320,37 @@ export function renderGenerator(container) {
     if (isDbReady()) {
       try {
         var db = getDb();
+        var result = await db.createLink(currentShortId, currentKValue, playerUrl, shortUrl);
+        if (result && result.duplicate) {
+          /* Duplikat — tampilkan shortlink dari entry sebelumnya di DB */
+          var existingPlayerUrl = result.link && result.link.player_url ? result.link.player_url : playerUrl;
+          var existingShortUrl = result.link && result.link.short_url ? result.link.short_url : shortUrl;
+          var existingCode = result.link && result.link.code ? result.link.code : currentShortId;
 
-        /* === STEP 1: Create PLAYER link === */
-        var playerResult = await db.createLink(currentShortId, currentKValue, playerUrl, shortUrl);
+          var dupShortUrl = getShortUrl(existingCode);
+          var dupSmartUrl = getShortUrl(currentSmartId);
+          var e1 = pickEmoji();
+          var e2 = pickEmoji();
+          shortResults.innerHTML =
+            '<div class="gen-short-line" data-url="' + escapeHtml(dupShortUrl) + '">' + e1 + '  ' + escapeHtml(dupShortUrl) + '</div>' +
+            '<div class="gen-short-line" data-url="' + escapeHtml(dupSmartUrl) + '">' + e2 + '  ' + escapeHtml(dupSmartUrl) + '</div>';
 
-        /* Determine player code (new or existing if duplicate) */
-        var playerCode = currentShortId;
-        var playerDisplayUrl = shortUrl;
-        var playerDisplayPlayerUrl = playerUrl;
-        var isPlayerDuplicate = false;
+          ShortStore.set(existingCode, currentKValue);
 
-        if (playerResult && playerResult.duplicate && playerResult.link) {
-          /* Player duplicate — use existing code */
-          playerCode = playerResult.link.code || currentShortId;
-          playerDisplayPlayerUrl = playerResult.link.player_url || playerUrl;
-          isPlayerDuplicate = true;
-          console.log('[Generator] Player duplicate detected, using existing code:', playerCode);
+          var smartResult = await db.createLink(currentSmartId, smartKValue, '', smartUrl);
+
+          outputSection.classList.add('visible');
+          setTimeout(function() {
+            outputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 100);
+
+          History.add(filename, dupShortUrl, existingPlayerUrl);
+          renderHistory();
+          showToast('Duplikat! Menampilkan shortlink sebelumnya.', true);
+          return;
         }
-
-        /* Save player k-value to ShortStore (for same-domain fast lookup) */
-        ShortStore.set(playerCode, currentKValue);
-
-        /* === STEP 2: Create SMARTLINK link (ALWAYS, even if player is duplicate) === */
         var smartResult = await db.createLink(currentSmartId, smartKValue, '', smartUrl);
-
-        /* Determine smartlink code (new or existing if duplicate) */
-        var smartCode = currentSmartId;
-        var isSmartDuplicate = false;
-
-        if (smartResult && smartResult.duplicate && smartResult.link) {
-          /* Smartlink duplicate — use existing code */
-          smartCode = smartResult.link.code || currentSmartId;
-          isSmartDuplicate = true;
-          console.log('[Generator] Smartlink duplicate detected, using existing code:', smartCode);
-        }
-
-        /* Save smartlink k-value to ShortStore */
-        ShortStore.set(smartCode, smartKValue);
-
-        /* === STEP 3: Build shortlink URLs with correct codes === */
-        var finalPlayerUrl = getShortUrl(playerCode);
-        var finalSmartUrl = getShortUrl(smartCode);
-
-        /* === STEP 4: Display results === */
-        var e1 = pickEmoji();
-        var e2 = pickEmoji();
-        shortResults.innerHTML =
-          '<div class="gen-short-line" data-url="' + escapeHtml(finalPlayerUrl) + '">' + e1 + '  ' + escapeHtml(finalPlayerUrl) + '</div>' +
-          '<div class="gen-short-line" data-url="' + escapeHtml(finalSmartUrl) + '">' + e2 + '  ' + escapeHtml(finalSmartUrl) + '</div>';
-
-        outputSection.classList.add('visible');
-        setTimeout(function() {
-          outputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
-
-        History.add(filename, finalPlayerUrl, playerDisplayPlayerUrl);
-        renderHistory();
-
-        if (isPlayerDuplicate && isSmartDuplicate) {
-          showToast('Video sudah pernah di-generate. Menampilkan shortlink yang sama.', true);
-        } else if (isPlayerDuplicate) {
-          showToast('Player duplicate! Menampilkan shortlink sebelumnya.', true);
-        } else {
-          showToast('Shortlink berhasil dibuat!', false);
-        }
-        return;
       } catch (e) {
-        console.error('[Generator] DB error:', e);
         showToast('Gagal simpan ke DB, shortlink hanya berlaku di browser ini', true);
       }
     }

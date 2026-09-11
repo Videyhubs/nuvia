@@ -10,10 +10,10 @@
  *   - Shuffle button to change article
  */
 
-import { getRandomArticle } from './safelink-articles.js?v=35';
-import { decodeKValue } from './utils.js?v=35';
-import { isDbReady, getDb } from './db/index.js?v=35';
-import { ShortStore } from './storage.js?v=35';
+import { getRandomArticle } from './safelink-articles.js?v=32';
+import { decodeKValue } from './utils.js?v=32';
+import { isDbReady, getDb } from './db/index.js?v=32';
+import { ShortStore } from './storage.js?v=32';
 
 /* =========================================================
    CONFIG — EDIT HERE
@@ -30,16 +30,7 @@ const SAFELINK_CFG = {
   /* Auto-redirect after countdown + k-value ready.
      true  = visitor auto-redirected (no click needed)
      false = visitor must click Continue button */
-  AUTO_REDIRECT: true,
-
-  /* Fallback URL — jika slug tidak ditemukan di DB/localStorage,
-     auto-redirect ke URL ini (biasanya smartlink monetization). */
-  FALLBACK_URL: 'https://omg10.com/4/10410353',
-
-  /* Auto-redirect ke FALLBACK_URL jika link not found.
-     true  = auto-redirect (visitor tidak lihat error)
-     false = tampilkan error message (DEFAULT — kembali ke behavior sebelumnya) */
-  AUTO_FALLBACK_ON_NOT_FOUND: false
+  AUTO_REDIRECT: true
 };
 
 
@@ -48,7 +39,6 @@ const SAFELINK_CFG = {
    ========================================================= */
 var _prefetchedKValue = null;
 var _prefetchError = null;
-var _prefetchNotFound = false;  /* flag: true jika slug tidak ditemukan */
 var _prefetchDone = false;
 var _currentArticle = null;
 
@@ -70,7 +60,6 @@ export function renderSafelink(container, slug) {
   /* Reset state */
   _prefetchedKValue = null;
   _prefetchError = null;
-  _prefetchNotFound = false;
   _prefetchDone = false;
 
   /* Pick random article */
@@ -96,31 +85,6 @@ export function renderSafelink(container, slug) {
   setupCountdown(delaySec, function() {
     var continueBtn = document.getElementById('safelink-continue');
 
-    /* Cek not-found FIRST — auto-fallback ke smartlink */
-    if (_prefetchDone && _prefetchNotFound && SAFELINK_CFG.AUTO_FALLBACK_ON_NOT_FOUND) {
-      console.log('[Safelink] Link not found, auto-fallback to:', SAFELINK_CFG.FALLBACK_URL);
-      /* Update UI untuk show redirecting */
-      if (continueBtn) {
-        continueBtn.classList.remove('disabled');
-        continueBtn.classList.add('loading');
-        continueBtn.disabled = false;
-        continueBtn.innerHTML =
-          '<i class="fa-solid fa-spinner fa-spin"></i> Redirecting...';
-      }
-      var statusPill = document.getElementById('safelink-status-pill');
-      if (statusPill) {
-        statusPill.classList.add('ready');
-        statusPill.innerHTML =
-          '<i class="fa-solid fa-circle-check"></i>' +
-          '<span class="safelink-status-text">Redirecting...</span>';
-      }
-      /* Redirect ke fallback URL */
-      setTimeout(function() {
-        window.location.href = SAFELINK_CFG.FALLBACK_URL;
-      }, 500);
-      return;
-    }
-
     if (_prefetchDone && _prefetchedKValue) {
       /* k-value ready → enable Continue + auto-direct if configured */
       enableContinueBtn();
@@ -143,21 +107,6 @@ export function renderSafelink(container, slug) {
       var pollTries = 0;
       var pollInterval = setInterval(function() {
         pollTries++;
-        /* Cek not-found di poll juga */
-        if (_prefetchDone && _prefetchNotFound && SAFELINK_CFG.AUTO_FALLBACK_ON_NOT_FOUND) {
-          clearInterval(pollInterval);
-          console.log('[Safelink] Link not found (poll), auto-fallback to:', SAFELINK_CFG.FALLBACK_URL);
-          if (continueBtn) {
-            continueBtn.classList.remove('disabled');
-            continueBtn.classList.add('loading');
-            continueBtn.innerHTML =
-              '<i class="fa-solid fa-spinner fa-spin"></i> Redirecting...';
-          }
-          setTimeout(function() {
-            window.location.href = SAFELINK_CFG.FALLBACK_URL;
-          }, 500);
-          return;
-        }
         if (_prefetchDone && _prefetchedKValue) {
           clearInterval(pollInterval);
           enableContinueBtn();
@@ -251,9 +200,7 @@ async function prefetchKValue(slug) {
 
   if (!kValue) {
     _prefetchError = 'Link not found. Slug "' + slug + '" does not exist in database or localStorage.';
-    _prefetchNotFound = true;  /* flag untuk auto-fallback */
     _prefetchDone = true;
-    console.warn('[Safelink] Link not found, will auto-fallback to:', SAFELINK_CFG.FALLBACK_URL);
     return;
   }
 
