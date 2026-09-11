@@ -1,0 +1,22 @@
+{
+  "type": "cpanel",
+  "apiUrl": "https://vidy.biz.id/api-proxy.php",
+  "apiKey": "",
+  "domains": [
+    "nuvia.biz.id",
+    "tv.nuvia.biz.id",
+    "cdn.nuvia.biz.id",
+    "go.nuvia.biz.id",
+    "get.nuvia.biz.id",
+    "velio.biz.id",
+    "tv.velio.biz.id",
+    "cdn.velio.biz.id",
+    "go.velio.biz.id",
+    "get.velio.biz.id",
+    "zivra.biz.id",
+    "tv.zivra.biz.id",
+    "cdn.zivra.biz.id",
+    "go.zivra.biz.id",
+    "get.zivra.biz.id"
+  ]
+}
