@@ -14,9 +14,9 @@ import {
   formatTimeAgo,
   showToast,
   copyText
-} from './utils.js?v=36';
-import { isDbReady, getDb, getDomains } from './db/index.js?v=36';
-import History, { ShortStore } from './storage.js?v=36';
+} from './utils.js?v=37';
+import { isDbReady, getDb, getDomains } from './db/index.js?v=37';
+import History, { ShortStore } from './storage.js?v=37';
 
 export function renderGenerator(container) {
   var domain = getDomain();
@@ -325,15 +325,12 @@ export function renderGenerator(container) {
         var playerResult = await db.createLink(currentShortId, currentKValue, playerUrl, shortUrl);
         console.log('[Generator] Player createLink result:', playerResult);
 
-        /* Determine player code (new or existing if duplicate)
-           NOTE: adapter returns link object directly (not wrapper),
-           so playerResult.code is the code, playerResult.duplicate is the flag */
+        /* Determine player code (new or existing if duplicate) */
         var playerCode = currentShortId;
         var playerDisplayPlayerUrl = playerUrl;
         var isPlayerDuplicate = false;
 
         if (playerResult && playerResult.duplicate) {
-          /* Player duplicate — use existing code from DB */
           playerCode = playerResult.code || currentShortId;
           playerDisplayPlayerUrl = playerResult.player_url || playerUrl;
           isPlayerDuplicate = true;
@@ -342,19 +339,20 @@ export function renderGenerator(container) {
           console.log('[Generator] Player new entry created, code:', playerCode);
         }
 
-        /* Save player k-value to ShortStore (for same-domain fast lookup) */
+        /* Save player k-value to ShortStore (BOTH codes for safety) */
         ShortStore.set(playerCode, currentKValue);
+        if (playerCode !== currentShortId) {
+          ShortStore.set(currentShortId, currentKValue);
+        }
 
         /* === STEP 2: Create SMARTLINK link (ALWAYS, even if player is duplicate) === */
         var smartResult = await db.createLink(currentSmartId, smartKValue, '', smartUrl);
         console.log('[Generator] Smartlink createLink result:', smartResult);
 
-        /* Determine smartlink code (new or existing if duplicate) */
         var smartCode = currentSmartId;
         var isSmartDuplicate = false;
 
         if (smartResult && smartResult.duplicate) {
-          /* Smartlink duplicate — use existing code from DB */
           smartCode = smartResult.code || currentSmartId;
           isSmartDuplicate = true;
           console.log('[Generator] Smartlink duplicate detected, using existing code:', smartCode);
@@ -362,8 +360,11 @@ export function renderGenerator(container) {
           console.log('[Generator] Smartlink new entry created, code:', smartCode);
         }
 
-        /* Save smartlink k-value to ShortStore */
+        /* Save smartlink k-value to ShortStore (BOTH codes for safety) */
         ShortStore.set(smartCode, smartKValue);
+        if (smartCode !== currentSmartId) {
+          ShortStore.set(currentSmartId, smartKValue);
+        }
 
         /* === STEP 3: Build shortlink URLs with correct codes === */
         var finalPlayerUrl = getShortUrl(playerCode);
@@ -371,17 +372,38 @@ export function renderGenerator(container) {
         console.log('[Generator] Final player URL:', finalPlayerUrl);
         console.log('[Generator] Final smartlink URL:', finalSmartUrl);
 
-        /* === STEP 4: Verify entries exist in DB (optional sanity check) === */
+        /* === STEP 4: Verify entries exist in DB === */
+        var playerVerified = false;
+        var smartVerified = false;
         try {
           var verifyPlayer = await db.getLinkByCode(playerCode);
           if (verifyPlayer && verifyPlayer.url) {
             console.log('[Generator] ✓ Player verified in DB, url length:', verifyPlayer.url.length);
+            playerVerified = true;
           } else {
-            console.error('[Generator] ✗ Player NOT found in DB after createLink!');
-            showToast('Warning: Player link tidak tersimpan ke DB', true);
+            console.error('[Generator] ✗ Player NOT found in DB! Trying to re-create...');
+            /* Try to re-create with current code */
+            await db.createLink(playerCode, currentKValue, playerUrl, finalPlayerUrl);
+            ShortStore.set(playerCode, currentKValue);
+            playerVerified = true;
           }
         } catch (verifyErr) {
-          console.warn('[Generator] Verify failed (non-critical):', verifyErr);
+          console.warn('[Generator] Player verify failed:', verifyErr);
+        }
+
+        try {
+          var verifySmart = await db.getLinkByCode(smartCode);
+          if (verifySmart && verifySmart.url) {
+            console.log('[Generator] ✓ Smartlink verified in DB, url length:', verifySmart.url.length);
+            smartVerified = true;
+          } else {
+            console.error('[Generator] ✗ Smartlink NOT found in DB! Trying to re-create...');
+            await db.createLink(smartCode, smartKValue, '', finalSmartUrl);
+            ShortStore.set(smartCode, smartKValue);
+            smartVerified = true;
+          }
+        } catch (verifyErr) {
+          console.warn('[Generator] Smartlink verify failed:', verifyErr);
         }
 
         /* === STEP 5: Display results === */
@@ -399,20 +421,28 @@ export function renderGenerator(container) {
         History.add(filename, finalPlayerUrl, playerDisplayPlayerUrl);
         renderHistory();
 
+        /* === STEP 6: Notification === */
         if (isPlayerDuplicate && isSmartDuplicate) {
-          showToast('Video sudah pernah di-generate. Menampilkan shortlink yang sama.', true);
+          showToast('✓ Video sudah pernah di-generate. Shortlink yang sama ditampilkan kembali.', false);
         } else if (isPlayerDuplicate) {
-          showToast('Player duplicate! Menampilkan shortlink sebelumnya.', true);
+          showToast('✓ Player duplicate! Shortlink sebelumnya ditampilkan kembali.', false);
+        } else if (playerVerified && smartVerified) {
+          showToast('✓ Shortlink berhasil dibuat & tersimpan ke DB!', false);
         } else {
-          showToast('Shortlink berhasil dibuat!', false);
+          showToast('⚠ Shortlink dibuat tapi ada issue verifikasi. Cek console.', true);
         }
         return;
       } catch (e) {
         console.error('[Generator] DB error:', e);
+        /* Fallback: still save to ShortStore so shortlink works in this browser */
+        ShortStore.set(currentShortId, currentKValue);
+        ShortStore.set(currentSmartId, smartKValue);
         showToast('Gagal simpan ke DB, shortlink hanya berlaku di browser ini', true);
       }
     } else {
       console.warn('[Generator] DB not ready, shortlink only valid in this browser');
+      ShortStore.set(currentShortId, currentKValue);
+      ShortStore.set(currentSmartId, smartKValue);
     }
 
     outputSection.classList.add('visible');

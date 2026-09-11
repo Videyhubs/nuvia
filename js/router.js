@@ -1,5 +1,5 @@
-import { extractSlugFromPath, slugToK, decodeKValue } from './utils.js?v=36';
-import { ShortStore } from './storage.js?v=36';
+import { extractSlugFromPath, slugToK, decodeKValue } from './utils.js?v=37';
+import { ShortStore } from './storage.js?v=37';
 
 export function getRoute() {
   var stored = sessionStorage.getItem('spa_redirect');

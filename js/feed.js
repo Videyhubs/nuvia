@@ -5,8 +5,8 @@
    click → open player
    ──────────────────────────────────────────────── */
 
-import { isDbReady, getDb } from './db/index.js?v=36';
-import { decodeKValue, formatTimeAgo, getFilenameFromPath } from './utils.js?v=36';
+import { isDbReady, getDb } from './db/index.js?v=37';
+import { decodeKValue, formatTimeAgo, getFilenameFromPath } from './utils.js?v=37';
 
 var feedLinks = [];
 
@@ -63,60 +63,85 @@ async function loadFeedVideos(isTrending) {
   var loaderEl = document.getElementById('feed-loader');
   if (!scrollEl) return;
 
+  console.log('[Feed] loadFeedVideos started, isTrending:', isTrending);
+
   if (!isDbReady()) {
+    console.warn('[Feed] DB not ready');
     showFeedEmpty(scrollEl, 'Database not connected.');
     return;
   }
 
   var db = getDb();
+  console.log('[Feed] DB apiUrl:', db.apiUrl || '(unknown)');
+
   var allLinks;
   try {
     allLinks = await db.getAllLinks();
+    console.log('[Feed] getAllLinks returned:', allLinks ? allLinks.length : 0, 'links');
+    if (allLinks && allLinks.length > 0) {
+      console.log('[Feed] Sample link:', JSON.stringify(allLinks[0]).substring(0, 200));
+    }
   } catch (e) {
+    console.error('[Feed] getAllLinks error:', e);
     showFeedEmpty(scrollEl, 'Failed to load videos from database.');
     return;
   }
 
   if (!allLinks || allLinks.length === 0) {
+    console.warn('[Feed] No links in DB');
     showFeedEmpty(scrollEl, 'No videos yet.');
     return;
   }
 
   var playerLinks = [];
+  var skippedCount = 0;
   for (var i = 0; i < allLinks.length; i++) {
     var link = allLinks[i];
-    if (!link || !link.url) continue;
-    var decoded = decodeKValue(link.url);
-    if (decoded && decoded.filename) {
-      /* Untuk display filename:
-         - V3 (sourceUrl): pakai segment terakhir dari sourceUrl
-         - V2 (cdnPath): pakai segment terakhir dari cdnPath
-         - V1 (filename): pakai filename langsung */
-      var displayFilename = decoded.filename;
-      if (decoded.sourceUrl) {
-        var fnFromSource = getFilenameFromPath(decoded.sourceUrl.replace(/^https?:\/\/[^/]+\//, ''));
-        if (fnFromSource) displayFilename = fnFromSource;
-      } else if (decoded.cdnPath) {
-        var fnFromPath = getFilenameFromPath(decoded.cdnPath);
-        if (fnFromPath) displayFilename = fnFromPath;
-      }
-      playerLinks.push({
-        link: link,
-        kValue: link.url,  /* k-value untuk direct player link */
-        filename: displayFilename,
-        sourceUrl: decoded.sourceUrl || '',
-        cdnKey: decoded.cdnKey || '',
-        cdnPath: decoded.cdnPath || '',
-        clicks: link.clicks || 0,
-        code: link.code || '',
-        short_url: link.short_url || '',
-        created_at: link.created_at || '',
-        ext: getExtension(displayFilename)
-      });
+    if (!link || !link.url) {
+      console.warn('[Feed] Link ' + i + ' has no url, skipping');
+      skippedCount++;
+      continue;
     }
+    var decoded = decodeKValue(link.url);
+    if (!decoded) {
+      console.warn('[Feed] Link ' + i + ' (code: ' + link.code + ') decode failed');
+      skippedCount++;
+      continue;
+    }
+    if (!decoded.filename) {
+      /* Smartlink or invalid — skip silently */
+      skippedCount++;
+      continue;
+    }
+
+    /* Untuk display filename */
+    var displayFilename = decoded.filename;
+    if (decoded.sourceUrl) {
+      var fnFromSource = getFilenameFromPath(decoded.sourceUrl.replace(/^https?:\/\/[^/]+\//, ''));
+      if (fnFromSource) displayFilename = fnFromSource;
+    } else if (decoded.cdnPath) {
+      var fnFromPath = getFilenameFromPath(decoded.cdnPath);
+      if (fnFromPath) displayFilename = fnFromPath;
+    }
+    playerLinks.push({
+      link: link,
+      kValue: link.url,
+      filename: displayFilename,
+      sourceUrl: decoded.sourceUrl || '',
+      cdnKey: decoded.cdnKey || '',
+      cdnPath: decoded.cdnPath || '',
+      clicks: link.clicks || 0,
+      code: link.code || '',
+      short_url: link.short_url || '',
+      created_at: link.created_at || '',
+      ext: getExtension(displayFilename)
+    });
   }
 
+  console.log('[Feed] Player links:', playerLinks.length, '| Skipped:', skippedCount);
+
   if (playerLinks.length === 0) {
+    console.warn('[Feed] No playable videos found (all entries are smartlinks or invalid)');
     showFeedEmpty(scrollEl, 'No playable videos found.');
     return;
   }

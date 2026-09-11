@@ -3,8 +3,8 @@
    Mendukung: cPanel (MySQL via PHP), JSONBin.io
    ──────────────────────────────────────────────── */
 
-import { JsonBinAdapter } from './jsonbin-adapter.js?v=36';
-import { RestApiAdapter } from './rest-adapter.js?v=36';
+import { JsonBinAdapter } from './jsonbin-adapter.js?v=37';
+import { RestApiAdapter } from './rest-adapter.js?v=37';
 
 var _adapter = null;
 var _config = null;
