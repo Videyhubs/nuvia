@@ -5,8 +5,8 @@
    click → open player
    ──────────────────────────────────────────────── */
 
-import { isDbReady, getDb } from './db/index.js?v=37';
-import { decodeKValue, formatTimeAgo, getFilenameFromPath } from './utils.js?v=37';
+import { isDbReady, getDb } from './db/index.js?v=38';
+import { decodeKValue, formatTimeAgo, getFilenameFromPath } from './utils.js?v=38';
 
 var feedLinks = [];
 
