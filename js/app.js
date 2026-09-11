@@ -1,10 +1,10 @@
-import { getRoute } from './router.js?v=32';
-import { renderGenerator } from './generator.js?v=32';
-import { renderPlayer } from './player.js?v=32';
-import { renderFeed } from './feed.js?v=32';
-import { renderSafelink } from './safelink.js?v=32';
-import { generateRandomFilename } from './utils.js?v=32';
-import { initDb } from './db/index.js?v=32';
+import { getRoute } from './router.js?v=36';
+import { renderGenerator } from './generator.js?v=36';
+import { renderPlayer } from './player.js?v=36';
+import { renderFeed } from './feed.js?v=36';
+import { renderSafelink } from './safelink.js?v=36';
+import { generateRandomFilename } from './utils.js?v=36';
+import { initDb } from './db/index.js?v=36';
 
 /* ═══════════════════════════════════════════════════════════════
    Routing:
