@@ -1,6 +1,6 @@
 {
   "type": "cpanel",
-  "apiUrl": "https://vidy.biz.id/api-proxy.php",
+  "apiUrl": "https://vidy.biz.id/api-proxy2.php",
   "apiKey": "",
   "domains": [
     "nuvia.biz.id",
