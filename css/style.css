@@ -646,74 +646,46 @@ input {
   padding: 20px;
 }
 
-/* ═══════════════════════════════════════════════════════════════   DOWNLOAD BUTTON — Animated   ═══════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════   DOWNLOAD BUTTON — DIGANTI IKLAN GIF (wide banner)   ═══════════════════════════════════════════════════ */
 .plr-download {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+  display: block;
   width: 100%;
-  max-width: 1200px;
+  max-width: 640px;
   margin: 16px auto 0;
-  padding: 16px 24px;
-  background: var(--card);
-  border: 1px solid var(--card-border);
-  color: #fff;
-  text-decoration: none;
-  border-radius: 12px;
-  transition: transform 0.15s ease, border-color 0.2s ease, background 0.2s ease;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.4));
+  transition: transform 0.15s ease, filter 0.2s ease;
+  animation: plrDlIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .plr-download:hover {
-  border-color: var(--accent-blue);
-  background: rgba(34, 38, 57, 0.95);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.55));
 }
 .plr-download:active {
   transform: scale(0.98);
 }
-
-
-
-.dl-icon {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #06b6d4, #3b82f6);
-  border-radius: 10px;
-  flex-shrink: 0;
-}
-.dl-icon i {
-  font-size: 1.1rem;
-}
-
-
-.dl-text {
-  flex: 1;
-  min-width: 0;
-}
-.dl-main {
+.plr-download img {
   display: block;
-  font-size: 0.92rem;
-  font-weight: 700;
-  line-height: 1.3;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  border-radius: 14px;
+  user-select: none;
+  -webkit-user-drag: none;
 }
-.dl-sub {
-  display: block;
-  font-size: 0.72rem;
-  font-weight: 500;
-  opacity: 0.75;
-}
-
-.dl-arrow {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255,255,255,0.06);
-  border-radius: 50%;
-  flex-shrink: 0;
+@keyframes plrDlIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════   RECOMMENDATIONS — Below Player   ═══════════════════════════════════════════════════ */
@@ -1471,10 +1443,8 @@ input {
   .feed-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .feed-card-title { font-size: 0.72rem; }
   .feed-card-meta { font-size: 0.6rem; }
-  .plr-download { padding: 14px 16px; gap: 12px; margin-top: 12px; border-radius: 10px; }
-  .dl-icon { width: 40px; height: 40px; }
-  .dl-icon i { font-size: 1rem; }
-  .dl-main { font-size: 0.84rem; }
+  .plr-download { margin-top: 12px; border-radius: 12px; max-width: 100%; }
+  .plr-download img { border-radius: 12px; }
 }
 
 /* ═══════════════════════════════════════════════════════════════

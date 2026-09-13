@@ -1,10 +1,11 @@
-import { getRoute } from './router.js?v=38';
-import { renderGenerator } from './generator.js?v=38';
-import { renderPlayer } from './player.js?v=38';
-import { renderFeed } from './feed.js?v=38';
-import { renderSafelink } from './safelink.js?v=38';
-import { generateRandomFilename } from './utils.js?v=38';
-import { initDb } from './db/index.js?v=38';
+import { getRoute } from './router.js?v=41';
+import { renderGenerator } from './generator.js?v=41';
+import { renderPlayer } from './player.js?v=41';
+import { renderFeed } from './feed.js?v=41';
+import { renderSafelink } from './safelink.js?v=41';
+import { generateRandomFilename } from './utils.js?v=41';
+import { initDb } from './db/index.js?v=41';
+import { mountFloatingAd } from './gif-ads.js?v=41';
 
 /* ═══════════════════════════════════════════════════════════════
    Routing:
@@ -30,6 +31,9 @@ import { initDb } from './db/index.js?v=38';
     renderGenerator(app);
     return;
   }
+
+  /* ── IKLAN MELAYANG (GIF random — semua halaman utama) ── */
+  mountFloatingAd();
 
   /* ── Main Mode ── */
   var dbPromise = initDb();

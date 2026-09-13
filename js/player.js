@@ -1,38 +1,34 @@
-import { decodeKValue, formatTimeAgo, getFilenameFromPath } from './utils.js?v=38';
-import { loadVideo } from './cdn-loader.js?v=38';
-import { isDbReady, getDb } from './db/index.js?v=38';
+import { decodeKValue, formatTimeAgo, getFilenameFromPath } from './utils.js?v=41';
+import { loadVideo } from './cdn-loader.js?v=41';
+import { isDbReady, getDb } from './db/index.js?v=41';
 
 /* =========================================================
    CONFIGURATION
    ========================================================= */
 const CFG = {
-  /* SMARTLINK */
-  REDIRECT_URL:
-    'https://omg10.com/4/10410353',
+  /* ═════════════════════════════════════════════════════════
+     IKLAN GIF (banner player + tombol download)
+     ➜ GANTI AD_CLICK_URL dengan link offer / CPA kamu.
+     ➜ Daftar GIF ada di folder /ads/
+     ═════════════════════════════════════════════════════════ */
+  GIF_AD: {
+    CLICK_URL: 'https://app.trcefy.com/click?pid=2&offer_id=576&sub2=u261441&sub5=s1SUBID1HERE',
 
-  /* 'banner' atau 'button' */
-  MONETIZATION_MODE: 'banner',
+    /* Banner dalam player (320x50) — dipilih RANDOM */
+    BANNERS: [
+      '/ads/banner-giveaway-100.gif',
+      '/ads/banner-paypal-250.gif',
+      '/ads/banner-reward-750.gif'
+    ],
 
-  /* BUTTON */
-  SHOW_SKIP_BTN: false,
-  BUTTON_TEXT: 'Click here to watch full video!',
+    /* GIF pengganti tombol download (640x120) — RANDOM */
+    DOWNLOAD_BANNERS: [
+      '/ads/dl-giveaway-750.gif',
+      '/ads/dl-paypal-100.gif'
+    ],
 
-  /* BANNER */
-  BANNER: {
-    ENABLED: true,
-    DELAY: 1500,
-    SHOW_CLOSE: true
-  },
-
-  /* ADSTERRA */
-  ADSTERRA: {
-    KEY: '508bcf5f3702d4bd48d225b529385479',
-    FORMAT: 'iframe',
-    WIDTH: 320,
-    HEIGHT: 50,
-    PARAMS: {},
-    SCRIPT_URL:
-      'https://fundingfashioned.com/508bcf5f3702d4bd48d225b529385479/invoke.js'
+    DELAY: 1200,      /* jeda sebelum banner muncul (ms) */
+    SHOW_CLOSE: true  /* tombol X pada banner */
   },
 
   /* VIDEO CDN — tambahkan field `key` untuk matching dengan k-value */
@@ -78,15 +74,13 @@ export function renderPlayer(container, route) {
   document.body.classList.add('is-player');
   document.body.classList.remove('is-feed');
 
-  let btnShown = false;
-  let redirectUrl = CFG.REDIRECT_URL;
-  let controlsTimer = null;
   let bannerClosed = false;
+  let controlsTimer = null;
 
 
   /* =========================================================
      PLAYER HTML
-     Banner sekarang DI DALAM plr-container.
+     Banner GIF ada DI DALAM plr-container (bawah tengah).
      ========================================================= */
   container.innerHTML =
     '<div class="plr-page" id="plr-page">' +
@@ -136,34 +130,17 @@ export function renderPlayer(container, route) {
           '</div>' +
 
           /*
-           * MONETIZATION AREA
-           * Banner akan diposisikan absolute bottom-center.
+           * SLOT IKLAN GIF BANNER
+           * Diposisikan absolute bottom-center di dalam player.
            */
           '<div class="plr-monetization-wrap" id="plr-monetization-wrap"></div>' +
 
-          /* SKIP BUTTON MODE */
-          '<button class="plr-skip" id="plr-skip">' +
-            '<i class="fa-solid fa-play"></i> ' +
-            '<span>' + escapeHTML(CFG.BUTTON_TEXT) + '</span>' +
-          '</button>' +
-
         '</div>' +
 
-        /* DOWNLOAD */
-        '<a class="plr-download" id="plr-download" href="#">' +
+        /* DOWNLOAD → DIGANTI IKLAN GIF (wide banner) */
+        '<a class="plr-download" id="plr-download" href="javascript:void(0)" rel="nofollow sponsored noopener">' +
 
-          '<div class="dl-icon">' +
-            '<i class="fa-solid fa-arrow-down"></i>' +
-          '</div>' +
-
-          '<div class="dl-text">' +
-            '<span class="dl-main">Download Video</span>' +
-            '<span class="dl-sub">MP4 HD Quality</span>' +
-          '</div>' +
-
-          '<div class="dl-arrow">' +
-            '<i class="fa-solid fa-chevron-right"></i>' +
-          '</div>' +
+          '<img id="plr-download-gif" src="" alt="Special Offer" draggable="false">' +
 
         '</a>' +
 
@@ -194,7 +171,6 @@ export function renderPlayer(container, route) {
      ========================================================= */
   const containerEl = document.getElementById('plr-container');
   const videoEl = document.getElementById('plr-video');
-  const skipBtn = document.getElementById('plr-skip');
   const controlsEl = document.getElementById('plr-controls');
   const btnPP = document.getElementById('plr-btn-pp');
   const btnVol = document.getElementById('plr-btn-vol');
@@ -205,8 +181,25 @@ export function renderPlayer(container, route) {
 
 
   /* =========================================================
-     ADD INLINE CSS UNTUK BANNER
-     Tidak perlu mengubah file CSS jika kamu belum mau.
+     HELPERS — IKLAN GIF
+     ========================================================= */
+  function pickRandom(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  function openAdUrl(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    var url = CFG.GIF_AD.CLICK_URL;
+    if (!url || url.indexOf('example.com') !== -1) return;
+    window.open(url, '_blank', 'noopener');
+  }
+
+
+  /* =========================================================
+     INLINE CSS UNTUK BANNER GIF (320x50)
      ========================================================= */
   function addBannerStyles() {
     if (document.getElementById('plr-ad-banner-styles')) return;
@@ -224,35 +217,29 @@ export function renderPlayer(container, route) {
         'transform:translateX(-50%);' +
         'width:320px;' +
         'max-width:calc(100% - 20px);' +
-        'height:50px;' +
         'z-index:50;' +
       '}' +
 
       '.plr-ad-banner{' +
         'position:relative;' +
+        'display:block;' +
         'width:320px;' +
         'max-width:100%;' +
-        'height:50px;' +
         'margin:0 auto;' +
+        'animation:plrAdIn .45s cubic-bezier(.22,1,.36,1) both;' +
       '}' +
 
-      '.plr-ad-content{' +
+      '.plr-ad-banner img{' +
+        'display:block;' +
         'width:320px;' +
-        'height:50px;' +
         'max-width:100%;' +
-        'overflow:hidden;' +
+        'height:auto;' +
+        'border-radius:10px;' +
+        'box-shadow:0 6px 24px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08);' +
+        'cursor:pointer;' +
       '}' +
 
-      '.plr-ad-label{' +
-        'position:absolute;' +
-        'left:0;' +
-        'top:-12px;' +
-        'font-size:8px;' +
-        'line-height:10px;' +
-        'opacity:.55;' +
-        'pointer-events:none;' +
-        'z-index:60;' +
-      '}' +
+      '.plr-ad-banner:active img{transform:scale(.97);}' +
 
       '.plr-ad-close{' +
         'position:absolute;' +
@@ -271,14 +258,17 @@ export function renderPlayer(container, route) {
         'z-index:100;' +
       '}' +
 
+      '@keyframes plrAdIn{' +
+        'from{opacity:0;transform:translateY(10px);}' +
+        'to{opacity:1;transform:translateY(0);}' +
+      '}' +
+
       '@media(max-width:480px){' +
         '.plr-monetization-wrap.plr-ad-banner-wrap{' +
           'bottom:10px;' +
           'max-width:calc(100% - 16px);' +
         '}' +
-        '.plr-ad-banner{' +
-          'max-width:100%;' +
-        '}' +
+        '.plr-ad-banner img{width:100%;}' +
       '}';
 
     document.head.appendChild(style);
@@ -288,18 +278,9 @@ export function renderPlayer(container, route) {
 
 
   /* =========================================================
-     POPUNDER
-     ========================================================= */
-  (function () {
-    var s = document.createElement('script');
-    s.dataset.zone = '10918787';
-    s.src = 'https://al5sm.com/tag.min.js';
-    document.body.appendChild(s);
-  })();
-
-
-  /* =========================================================
-     HISTATS
+     HISTATS — ANALYTICS (DIPERTAHANKAN / DO NOT REMOVE)
+     Kode asli dari script, ID milik user. Bukan iklan —
+     jangan ikut dihapus saat membersihkan iklan.
      ========================================================= */
   window._Hasync = window._Hasync || [];
   window._Hasync.push(['Histats.start', '1,4996898,4,0,0,0,00010000']);
@@ -529,79 +510,21 @@ export function renderPlayer(container, route) {
 
 
   /* =========================================================
-     SMARTLINK REDIRECT
+     SETUP IKLAN GIF BANNER (320x50, RANDOM)
      ========================================================= */
-  function doRedirect() {
-    if (!redirectUrl) return;
-
-    window.location.href = redirectUrl;
-  }
-
-
-  /* =========================================================
-     BUTTON
-     ========================================================= */
-  function triggerButton() {
-    if (btnShown) return;
-
-    btnShown = true;
-    skipBtn.classList.add('visible');
-  }
-
-
-  /* =========================================================
-     GET MODE
-     ========================================================= */
-  function getMonetizationMode() {
-    var mode = String(
-      CFG.MONETIZATION_MODE || ''
-    ).toLowerCase();
-
-    return mode === 'banner'
-      ? 'banner'
-      : 'button';
-  }
-
-
-  /* =========================================================
-     SETUP MONETIZATION
-     ========================================================= */
-  function setupMonetization() {
-    var mode = getMonetizationMode();
-
-    if (mode === 'button') {
-      monetizationWrap.style.display = 'none';
-      skipBtn.style.display = '';
-
-      if (!CFG.SHOW_SKIP_BTN) {
-        skipBtn.style.display = 'none';
-        return;
-      }
-
-      var btnDelay = 30000 + Math.random() * 10000;
-
-      setTimeout(function () {
-        triggerButton();
-      }, btnDelay);
-
-      return;
-    }
-
-    /* BANNER MODE */
-    skipBtn.style.display = 'none';
-
-    if (!CFG.BANNER.ENABLED) return;
+  function setupGifBanner() {
+    if (!monetizationWrap) return;
 
     setTimeout(function () {
       if (!bannerClosed) {
         createBanner();
       }
-    }, CFG.BANNER.DELAY);
+    }, CFG.GIF_AD.DELAY);
   }
 
 
   /* =========================================================
-     CREATE BANNER
+     CREATE BANNER GIF
      ========================================================= */
   function createBanner() {
     if (!monetizationWrap || bannerClosed) return;
@@ -610,17 +533,22 @@ export function renderPlayer(container, route) {
     monetizationWrap.className =
       'plr-monetization-wrap plr-ad-banner-wrap';
 
-    var bannerBox = document.createElement('div');
+    var bannerBox = document.createElement('a');
     bannerBox.className = 'plr-ad-banner';
+    bannerBox.href = 'javascript:void(0)';
+    bannerBox.setAttribute('rel', 'nofollow sponsored noopener');
+    bannerBox.setAttribute('aria-label', 'Sponsored offer');
 
-    var adContent = document.createElement('div');
-    adContent.className = 'plr-ad-content';
+    var img = document.createElement('img');
+    img.src = pickRandom(CFG.GIF_AD.BANNERS);
+    img.alt = 'Special Offer';
+    img.draggable = false;
 
-    bannerBox.appendChild(adContent);
-
+    bannerBox.appendChild(img);
+    bannerBox.addEventListener('click', openAdUrl);
 
     /* CLOSE BUTTON */
-    if (CFG.BANNER.SHOW_CLOSE) {
+    if (CFG.GIF_AD.SHOW_CLOSE) {
       var closeBtn = document.createElement('button');
 
       closeBtn.type = 'button';
@@ -646,81 +574,22 @@ export function renderPlayer(container, route) {
 
     monetizationWrap.appendChild(bannerBox);
     monetizationWrap.style.display = 'block';
-
-    injectAdsterraBanner(adContent);
   }
 
 
   /* =========================================================
-     LOAD ORIGINAL ADSTERRA BANNER
+     INITIALIZE IKLAN GIF
      ========================================================= */
-  function injectAdsterraBanner(target) {
-    if (!target) return;
+  setupGifBanner();
 
-    try {
-      /*
-       * Menggunakan scoped/global atOptions sesuai
-       * format kode banner asli.
-       */
-      var optionsScript = document.createElement('script');
-
-      optionsScript.type = 'text/javascript';
-
-      optionsScript.text =
-        "var atOptions = {" +
-          "'key':'" + CFG.ADSTERRA.KEY + "'," +
-          "'format':'" + CFG.ADSTERRA.FORMAT + "'," +
-          "'height':" + CFG.ADSTERRA.HEIGHT + "," +
-          "'width':" + CFG.ADSTERRA.WIDTH + "," +
-          "'params':{}" +
-        "};";
-
-      /*
-       * Beberapa script iklan membaca atOptions secara global.
-       * Simpan juga pada window untuk kompatibilitas.
-       */
-      window.atOptions = {
-        key: CFG.ADSTERRA.KEY,
-        format: CFG.ADSTERRA.FORMAT,
-        height: CFG.ADSTERRA.HEIGHT,
-        width: CFG.ADSTERRA.WIDTH,
-        params: CFG.ADSTERRA.PARAMS
-      };
-
-      var invokeScript = document.createElement('script');
-
-      invokeScript.type = 'text/javascript';
-      invokeScript.src = CFG.ADSTERRA.SCRIPT_URL;
-
-      /*
-       * Jangan async agar konfigurasi sudah tersedia
-       * sebelum invoke.js dijalankan.
-       */
-      invokeScript.async = false;
-
-      target.appendChild(optionsScript);
-      target.appendChild(invokeScript);
-
-    } catch (err) {
-      target.innerHTML = '';
+  /* DOWNLOAD GIF — set sumber gambar random */
+  if (downloadBtn) {
+    var dlGif = document.getElementById('plr-download-gif');
+    if (dlGif) {
+      dlGif.src = pickRandom(CFG.GIF_AD.DOWNLOAD_BANNERS);
     }
+    downloadBtn.addEventListener('click', openAdUrl);
   }
-
-
-  /* =========================================================
-     INITIALIZE MONETIZATION
-     ========================================================= */
-  setupMonetization();
-
-
-  /* =========================================================
-     DOWNLOAD → SMARTLINK
-     ========================================================= */
-  downloadBtn.addEventListener('click', function (e) {
-    e.preventDefault();
-    doRedirect();
-  });
-
 
   /* =========================================================
      RECOMMENDATIONS
@@ -1139,25 +1008,6 @@ export function renderPlayer(container, route) {
     }
 
 
-    /* BUTTON CLICK */
-    skipBtn.addEventListener(
-      'click',
-      function (e) {
-        e.stopPropagation();
-        doRedirect();
-      }
-    );
-
-
-    /* VIDEO ENDED → SMARTLINK */
-    videoEl.addEventListener(
-      'ended',
-      function () {
-        doRedirect();
-      }
-    );
-
-
     /* LOAD RECOMMENDATIONS */
     loadRecommendations(filename);
 
@@ -1178,7 +1028,9 @@ export function renderPlayer(container, route) {
         CFG.CDN_TIMEOUT
       );
     } catch (err) {
-      setTimeout(doRedirect, 3000);
+      /* Video gagal dimuat — tidak ada redirect iklan lagi.
+         Visitor tetap di halaman (banner GIF & rekomendasi tetap tampil). */
+      console.warn('[Player] Video load failed:', err);
       return;
     }
 
