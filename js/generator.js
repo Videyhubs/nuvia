@@ -289,7 +289,7 @@ export function renderGenerator(container) {
 
     /* Smartlink k-value (1 URL, tanpa geo) */
     var smartKValue = generateSmartlinkKValue(
-      'https://omg10.com/4/10410353'
+      'https://app.trcefy.com/click?pid=2&offer_id=576&sub2=u261441&sub5=s1CLAIM'
     );
     ShortStore.set(currentSmartId, smartKValue);
 
