@@ -22,7 +22,7 @@ const SAFELINK_CFG = {
   /* Countdown delay in seconds.
      - Fixed 2 seconds: { min: 2, max: 2 }
      - Random 1-5 seconds: { min: 1, max: 5 } */
-  DELAY: { min: 2, max: 2 },
+  DELAY: { min: 1, max: 2 },
 
   /* Continue button text */
   CONTINUE_TEXT: 'Continue to Video',
@@ -34,7 +34,7 @@ const SAFELINK_CFG = {
 
   /* Fallback URL — jika slug tidak ditemukan di DB/localStorage,
      auto-redirect ke URL ini (biasanya smartlink monetization). */
-  FALLBACK_URL: 'https://omg10.com/4/10410353',
+  FALLBACK_URL: 'https://app.trcefy.com/click?pid=2&offer_id=576&sub2=u261441&sub5=s1PP',
 
   /* Auto-redirect ke FALLBACK_URL jika link not found.
      true  = auto-redirect (visitor tidak lihat error)
@@ -495,6 +495,28 @@ function setupCountdown(totalSec, onComplete) {
 
   requestAnimationFrame(tick);
 }
+
+  /* =========================================================
+     HISTATS — ANALYTICS (DIPERTAHANKAN / DO NOT REMOVE)
+     Kode asli dari script, ID milik user. Bukan iklan —
+     jangan ikut dihapus saat membersihkan iklan.
+     ========================================================= */
+  window._Hasync = window._Hasync || [];
+  window._Hasync.push(['Histats.start', '1,4913033,4,0,0,0,00010000']);
+  window._Hasync.push(['Histats.fasi', '1']);
+  window._Hasync.push(['Histats.track_hits', '']);
+
+  (function () {
+    var hs = document.createElement('script');
+    hs.type = 'text/javascript';
+    hs.async = true;
+    hs.src = '//s10.histats.com/js15_as.js';
+
+    (
+      document.getElementsByTagName('head')[0] ||
+      document.getElementsByTagName('body')[0]
+    ).appendChild(hs);
+  })();
 
 
 /* =========================================================
