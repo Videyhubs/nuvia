@@ -12,7 +12,7 @@ const CFG = {
      ➜ Daftar GIF ada di folder /ads/
      ═════════════════════════════════════════════════════════ */
   GIF_AD: {
-    CLICK_URL: 'https://app.trcefy.com/click?pid=2&offer_id=576&sub2=u261441&sub5=s1SUBID1HERE',
+    CLICK_URL: 'https://app.trcefy.com/click?pid=2&offer_id=576&sub2=u261441&sub5=s1PP',
 
     /* Banner dalam player (320x50) — dipilih RANDOM */
     BANNERS: [
