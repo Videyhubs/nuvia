@@ -27,7 +27,7 @@ const FLOATING_CFG = {
   /* ➜ GANTI dengan link offer / CPA kamu nanti.
      (Sementara masih contoh: klik sengaja diabaikan selama
       URL masih mengandung "example.com") */
-  CLICK_URL: 'https://app.trcefy.com/click?pid=2&offer_id=576&sub2=u261441&sub5=s1SUBID1HERE',
+  CLICK_URL: 'https://app.trcefy.com/click?pid=2&offer_id=576&sub2=u261441&sub5=s1PP',
 
   /* Daftar desain iklan GIF (folder /ads/) — dipilih RANDOM.
      Semua desain sudah pakai copy Inggris jujur:
