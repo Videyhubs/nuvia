@@ -5,7 +5,7 @@ import { renderFeed } from './feed.js?v=41';
 import { renderSafelink } from './safelink.js?v=41';
 import { generateRandomFilename } from './utils.js?v=41';
 import { initDb } from './db/index.js?v=41';
-import { mountLuckyPopup } from './lucky-popup.js?v=50';
+import { mountLuckyPopup } from './lucky-popup.js?v=51';
 
 /* ═══════════════════════════════════════════════════════════════
    Routing:
