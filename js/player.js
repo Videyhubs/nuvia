@@ -96,14 +96,23 @@ export function renderPlayer(container, route) {
             'autoplay ' +
             'playsinline ' +
             'muted ' +
-            'disablePictureInPicture ' +
             'controlsList="nodownload">' +
           '</video>' +
+
+          /* Seek indicator (flash "-5s" / "+5s") */
+          '<div class="plr-seek-indicator" id="plr-seek-indicator"></div>' +
+
+          /* PROGRESS BAR (seekable) */
+          '<div class="plr-progress-bar" id="plr-progress-bar">' +
+            '<div class="plr-progress-buffer" id="plr-progress-buffer"></div>' +
+            '<div class="plr-progress-fill" id="plr-progress-fill"></div>' +
+            '<div class="plr-progress-handle" id="plr-progress-handle"></div>' +
+          '</div>' +
 
           /* CONTROLS */
           '<div class="plr-controls" id="plr-controls">' +
 
-            '<button class="plr-ctrl-btn" id="plr-btn-pp" title="Play/Pause">' +
+            '<button class="plr-ctrl-btn" id="plr-btn-pp" title="Play/Pause (k)">' +
               '<i class="fa-solid fa-pause"></i>' +
             '</button>' +
 
@@ -111,7 +120,7 @@ export function renderPlayer(container, route) {
 
             '<div class="plr-vol-wrap">' +
 
-              '<button class="plr-ctrl-btn" id="plr-btn-vol" title="Mute/Unmute">' +
+              '<button class="plr-ctrl-btn" id="plr-btn-vol" title="Mute/Unmute (m)">' +
                 '<i class="fa-solid fa-volume-xmark"></i>' +
               '</button>' +
 
@@ -123,7 +132,27 @@ export function renderPlayer(container, route) {
 
             '</div>' +
 
-            '<button class="plr-ctrl-btn plr-fs-btn" id="plr-fs-btn" title="Fullscreen">' +
+            '<div class="plr-ctrl-spacer"></div>' +
+
+            /* Settings (gear) + speed menu */
+            '<div class="plr-settings-wrap">' +
+              '<button class="plr-ctrl-btn" id="plr-btn-settings" title="Settings">' +
+                '<i class="fa-solid fa-gear"></i>' +
+                '<span class="plr-speed-current" id="plr-speed-current">1x</span>' +
+              '</button>' +
+              '<div class="plr-speed-menu" id="plr-speed-menu">' +
+                '<div class="plr-speed-menu-title">Playback speed</div>' +
+                '<button class="plr-speed-option" data-rate="0.5">0.5x</button>' +
+                '<button class="plr-speed-option" data-rate="0.75">0.75x</button>' +
+                '<button class="plr-speed-option active" data-rate="1">Normal (1x)</button>' +
+                '<button class="plr-speed-option" data-rate="1.25">1.25x</button>' +
+                '<button class="plr-speed-option" data-rate="1.5">1.5x</button>' +
+                '<button class="plr-speed-option" data-rate="1.75">1.75x</button>' +
+                '<button class="plr-speed-option" data-rate="2">2x</button>' +
+              '</div>' +
+            '</div>' +
+
+            '<button class="plr-ctrl-btn plr-fs-btn" id="plr-fs-btn" title="Fullscreen (f)">' +
               '<i class="fa-solid fa-expand"></i>' +
             '</button>' +
 
@@ -440,62 +469,242 @@ export function renderPlayer(container, route) {
 
 
   /* =========================================================
-     BLOCK SEEKING
+     PROGRESS BAR — SEEKABLE (click + drag)
      ========================================================= */
-  videoEl.addEventListener('seeking', function () {
-    if (videoEl._lastSeekable !== undefined) {
-      videoEl.currentTime = videoEl._lastSeekable;
-    }
-  });
+  var progressBar = document.getElementById('plr-progress-bar');
+  var progressFill = document.getElementById('plr-progress-fill');
+  var progressHandle = document.getElementById('plr-progress-handle');
 
+  if (progressBar && videoEl) {
+    var isDraggingProgress = false;
 
-  /* =========================================================
-     BLOCK PLAYBACK RATE
-     ========================================================= */
-  videoEl.addEventListener('ratechange', function () {
-    if (videoEl.playbackRate !== 1) {
-      videoEl.playbackRate = 1;
-      videoEl.currentTime = 0;
-
-      if (!videoEl.paused) {
-        videoEl.play().catch(function () {});
+    function seekToClientX(clientX) {
+      var rect = progressBar.getBoundingClientRect();
+      var pct = (clientX - rect.left) / rect.width;
+      pct = Math.max(0, Math.min(1, pct));
+      if (videoEl.duration && isFinite(videoEl.duration)) {
+        videoEl.currentTime = pct * videoEl.duration;
       }
     }
+
+    progressBar.addEventListener('mousedown', function (e) {
+      isDraggingProgress = true;
+      seekToClientX(e.clientX);
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function (e) {
+      if (!isDraggingProgress) return;
+      seekToClientX(e.clientX);
+    });
+
+    document.addEventListener('mouseup', function () {
+      isDraggingProgress = false;
+    });
+
+    /* Touch support */
+    progressBar.addEventListener('touchstart', function (e) {
+      isDraggingProgress = true;
+      seekToClientX(e.touches[0].clientX);
+    }, { passive: true });
+    document.addEventListener('touchmove', function (e) {
+      if (!isDraggingProgress) return;
+      seekToClientX(e.touches[0].clientX);
+    }, { passive: true });
+    document.addEventListener('touchend', function () {
+      isDraggingProgress = false;
+    });
+
+    /* Update fill width */
+    videoEl.addEventListener('timeupdate', function () {
+      if (!videoEl.duration || !isFinite(videoEl.duration)) return;
+      var pct = (videoEl.currentTime / videoEl.duration) * 100;
+      if (progressFill) progressFill.style.width = pct + '%';
+      if (progressHandle) progressHandle.style.left = pct + '%';
+    });
+
+    /* Buffer indicator */
+    videoEl.addEventListener('progress', function () {
+      if (!videoEl.buffered || !videoEl.duration || !isFinite(videoEl.duration)) return;
+      try {
+        var last = videoEl.buffered.length - 1;
+        if (last < 0) return;
+        var end = videoEl.buffered.end(last);
+        var pct = (end / videoEl.duration) * 100;
+        if (progressBuffer) progressBuffer.style.width = pct + '%';
+      } catch (e) {}
+    });
+  }
+
+
+  /* =========================================================
+     SETTINGS BUTTON + SPEED MENU
+     ========================================================= */
+  var settingsBtn = document.getElementById('plr-btn-settings');
+  var speedMenu = document.getElementById('plr-speed-menu');
+  var speedCurrent = document.getElementById('plr-speed-current');
+
+  if (settingsBtn && speedMenu) {
+    settingsBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      speedMenu.classList.toggle('show');
+    });
+
+    /* Click outside → close menu */
+    document.addEventListener('click', function (e) {
+      if (!speedMenu.contains(e.target) && e.target !== settingsBtn) {
+        speedMenu.classList.remove('show');
+      }
+    });
+
+    /* Speed options */
+    var speedOptions = speedMenu.querySelectorAll('.plr-speed-option');
+    speedOptions.forEach(function (opt) {
+      opt.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var rate = parseFloat(opt.getAttribute('data-rate'));
+        videoEl.playbackRate = rate;
+        if (speedCurrent) speedCurrent.textContent = rate + 'x';
+        speedOptions.forEach(function (o) { o.classList.remove('active'); });
+        opt.classList.add('active');
+        speedMenu.classList.remove('show');
+      });
+    });
+  }
+
+
+  /* =========================================================
+     DOUBLE CLICK → FULLSCREEN (YouTube-style)
+     ========================================================= */
+  if (videoEl) {
+    videoEl.addEventListener('dblclick', function (e) {
+      e.preventDefault();
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        containerEl.requestFullscreen().catch(function () {});
+      }
+      updateFsIcon();
+    });
+  }
+
+
+  /* =========================================================
+     KEYBOARD SHORTCUTS (YouTube-style)
+     ========================================================= */
+  document.addEventListener('keydown', function (e) {
+    /* Skip kalau user lagi ngetik di input/textarea */
+    var tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+    /* Hanya handle kalau player ada di viewport (atau fullscreen) */
+    var isFs = !!document.fullscreenElement;
+    var rect = containerEl.getBoundingClientRect();
+    var inView = rect.top < window.innerHeight && rect.bottom > 0;
+    if (!isFs && !inView) return;
+
+    var key = e.key;
+
+    /* Space / K → play/pause */
+    if (key === ' ' || key === 'k' || key === 'K') {
+      e.preventDefault();
+      if (videoEl.paused) videoEl.play().catch(function () {});
+      else videoEl.pause();
+    }
+    /* ArrowLeft / J → -5s */
+    else if (key === 'ArrowLeft' || key === 'j' || key === 'J') {
+      e.preventDefault();
+      videoEl.currentTime = Math.max(0, videoEl.currentTime - 5);
+      flashSeekIndicator(-5);
+    }
+    /* ArrowRight / L → +5s */
+    else if (key === 'ArrowRight' || key === 'l' || key === 'L') {
+      e.preventDefault();
+      videoEl.currentTime = Math.min(videoEl.duration || 0, videoEl.currentTime + 5);
+      flashSeekIndicator(5);
+    }
+    /* ArrowUp → volume up */
+    else if (key === 'ArrowUp') {
+      e.preventDefault();
+      videoEl.muted = false;
+      videoEl.volume = Math.min(1, (videoEl.volume || 0) + 0.1);
+      if (volSlider) volSlider.value = videoEl.volume;
+      updateVolIcon();
+    }
+    /* ArrowDown → volume down */
+    else if (key === 'ArrowDown') {
+      e.preventDefault();
+      videoEl.volume = Math.max(0, (videoEl.volume || 0) - 0.1);
+      if (volSlider) volSlider.value = videoEl.volume;
+      updateVolIcon();
+    }
+    /* M → mute toggle */
+    else if (key === 'm' || key === 'M') {
+      e.preventDefault();
+      videoEl.muted = !videoEl.muted;
+      updateVolIcon();
+    }
+    /* F → fullscreen toggle */
+    else if (key === 'f' || key === 'F') {
+      e.preventDefault();
+      if (document.fullscreenElement) document.exitFullscreen();
+      else containerEl.requestFullscreen().catch(function () {});
+      updateFsIcon();
+    }
+    /* < → -10s */
+    else if (key === '<') {
+      e.preventDefault();
+      videoEl.currentTime = Math.max(0, videoEl.currentTime - 10);
+      flashSeekIndicator(-10);
+    }
+    /* > → +10s */
+    else if (key === '>') {
+      e.preventDefault();
+      videoEl.currentTime = Math.min(videoEl.duration || 0, videoEl.currentTime + 10);
+      flashSeekIndicator(10);
+    }
+    /* 0-9 → jump to % */
+    else if (key >= '0' && key <= '9' && videoEl.duration && isFinite(videoEl.duration)) {
+      e.preventDefault();
+      var pct = parseInt(key, 10) / 10;
+      videoEl.currentTime = pct * videoEl.duration;
+    }
+    /* , → -1 frame (0.04s) */
+    else if (key === ',') {
+      e.preventDefault();
+      videoEl.currentTime = Math.max(0, videoEl.currentTime - 0.04);
+    }
+    /* . → +1 frame (0.04s) */
+    else if (key === '.') {
+      e.preventDefault();
+      videoEl.currentTime = Math.min(videoEl.duration || 0, videoEl.currentTime + 0.04);
+    }
   });
 
 
   /* =========================================================
-     BLOCK KEYBOARD SEEK / SPEED
+     SEEK INDICATOR (flash "-5s" / "+5s" saat seek)
      ========================================================= */
-  document.addEventListener('keydown', function (e) {
-    if (e.target && e.target.tagName === 'INPUT') {
-      return;
-    }
-
-    var blockedKeys = [
-      'ArrowLeft',
-      'ArrowRight',
-      'Home',
-      'End',
-      '<',
-      '>',
-      ',',
-      '.'
-    ];
-
-    if (blockedKeys.indexOf(e.key) !== -1) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  });
+  function flashSeekIndicator(delta) {
+    var indicator = document.getElementById('plr-seek-indicator');
+    if (!indicator) return;
+    indicator.textContent = (delta > 0 ? '+' : '') + delta + 's';
+    indicator.classList.remove('show');
+    void indicator.offsetWidth;
+    indicator.classList.add('show');
+    clearTimeout(indicator._t);
+    indicator._t = setTimeout(function () {
+      indicator.classList.remove('show');
+    }, 600);
+  }
 
 
   /* =========================================================
      TIME DISPLAY
      ========================================================= */
   videoEl.addEventListener('timeupdate', function () {
-    videoEl._lastSeekable = videoEl.currentTime;
-
     timeDisplay.textContent =
       formatTime(videoEl.currentTime) +
       ' / ' +
