@@ -5,7 +5,7 @@ import { renderFeed } from './feed.js?v=41';
 import { renderSafelink } from './safelink.js?v=41';
 import { generateRandomFilename } from './utils.js?v=41';
 import { initDb } from './db/index.js?v=41';
-import { mountFloatingAd } from './gif-ads.js?v=41';
+import { mountLuckyPopup } from './lucky-popup.js?v=48';
 
 /* ═══════════════════════════════════════════════════════════════
    Routing:
@@ -32,8 +32,8 @@ import { mountFloatingAd } from './gif-ads.js?v=41';
     return;
   }
 
-  /* ── IKLAN MELAYANG (GIF random — semua halaman utama) ── */
-  mountFloatingAd();
+  /* ── IKLAN MELAYANG (Lucky popup — pure HTML/CSS/JS, no GIF) ── */
+  mountLuckyPopup();
 
   /* ── Main Mode ── */
   var dbPromise = initDb();
