@@ -41,7 +41,7 @@ const CFG = {
   POPUP_FIRST_DELAY_MS: 3000,
   POPUP_MIN_GAP_MS: 5000,
   POPUP_MAX_GAP_MS: 9000,
-  POPUP_VISIBLE_MAX: 2,
+  POPUP_VISIBLE_MAX: 3,
   POPUP_AUTO_REMOVE_MS: 4500,
 
   LUCK_TARGET_MIN: 73,
@@ -75,9 +75,18 @@ const PRIZE_POOL = PRIZES.flatMap(function (p) {
 });
 
 /* =========================================================
-   TIME AGO POOL (biased to recent)
+   TIME AGO POOL (uniform random, banyak variasi)
    ========================================================= */
-const TIME_AGO = ['just now', '2s ago', '5s ago', '12s ago', '3s ago', '8s ago', '1m ago'];
+const TIME_AGO = [
+  'just now', '3s ago', '5s ago', '8s ago', '12s ago', '18s ago',
+  '24s ago', '32s ago', '45s ago', '58s ago', '1m ago', '2m ago',
+  '3m ago', '4m ago', '5m ago'
+];
+
+function pickTimeAgo() {
+  /* uniform random — tidak ada bias ke "just now" lagi */
+  return TIME_AGO[Math.floor(Math.random() * TIME_AGO.length)];
+}
 
 /* =========================================================
    STATE
@@ -157,7 +166,9 @@ export function mountLuckyPopup() {
   if (!popupSchedulerStarted) {
     popupSchedulerStarted = true;
     setTimeout(function () {
+      /* popup pertama: batch 2 */
       spawnWinnerPopup();
+      setTimeout(function () { spawnWinnerPopup(); }, 250);
       scheduleNextPopup();
     }, CFG.POPUP_FIRST_DELAY_MS);
   }
@@ -217,16 +228,7 @@ function buildMainCardHtml() {
           '<iconify-icon icon="lucide:x"></iconify-icon>' +
         '</button>' +
 
-        /* 1. Top Badge */
-        '<div class="lucky-pop-flex-center" style="margin-bottom:12px;">' +
-          '<div class="lucky-pop-top-badge">' +
-            '<iconify-icon icon="lucide:sparkles"></iconify-icon>' +
-            '<span>Limited Time Offer</span>' +
-            '<iconify-icon icon="lucide:sparkles"></iconify-icon>' +
-          '</div>' +
-        '</div>' +
-
-        /* 2. Prize Section */
+        /* Prize Section */
         '<div class="lucky-pop-prize-section">' +
           '<span class="lucky-pop-sparkle s1">✦</span>' +
           '<span class="lucky-pop-sparkle s2">✧</span>' +
@@ -497,11 +499,6 @@ function pickPrize() {
   return PRIZE_POOL[Math.floor(Math.random() * PRIZE_POOL.length)];
 }
 
-function pickTimeAgo() {
-  var idx = Math.floor(Math.pow(Math.random(), 1.8) * TIME_AGO.length);
-  return TIME_AGO[Math.min(idx, TIME_AGO.length - 1)];
-}
-
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -577,7 +574,18 @@ function scheduleNextPopup() {
   var gap = CFG.POPUP_MIN_GAP_MS +
     Math.floor(Math.random() * (CFG.POPUP_MAX_GAP_MS - CFG.POPUP_MIN_GAP_MS + 1));
   setTimeout(function () {
-    spawnWinnerPopup();
+    /* 50% chance batch (2-3 popups), 50% solo */
+    var batchRoll = Math.random();
+    var count = 1;
+    if (batchRoll < 0.30) count = 3;
+    else if (batchRoll < 0.55) count = 2;
+
+    for (var i = 0; i < count; i++) {
+      /* stagger 200ms antar popup dalam batch supaya tidak tabrakan visual */
+      (function (delay) {
+        setTimeout(function () { spawnWinnerPopup(); }, delay);
+      })(i * 200);
+    }
     scheduleNextPopup();
   }, gap);
 }
@@ -786,34 +794,22 @@ body.lucky-pop-lock { overflow: hidden; }
   animation: lpScalePop 0.7s cubic-bezier(0.18,1.35,0.32,1) 0.1s both;
 }
 .lucky-pop-coin-3d {
-  width: 78px;
-  height: 78px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #ffffff 0%, #f4f7fc 50%, #dbe7f5 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 900;
-  color: #78350f;
-  font-size: 36px;
-  transform-style: preserve-3d;
-  animation: lpCoinSpin 2s linear infinite;
-  box-shadow: 0 0 30px rgba(0, 112, 186, 0.6), 0 0 0 4px rgba(0, 112, 186, 0.15);
+  width: 240px;
+  height: auto;
+  display: block;
+  background: transparent;
+  box-shadow: none;
+  animation: none;
   position: relative;
+  filter: drop-shadow(0 8px 28px rgba(0, 112, 186, 0.5));
 }
-.lucky-pop-coin-3d::before {
-  content: '';
-  position: absolute;
-  inset: 4px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(255,255,255,0.7), transparent 60%);
-}
+.lucky-pop-coin-3d::before { display: none; }
 .lucky-pop-coin-3d svg, .lucky-pop-coin-3d img.lucky-pop-coin-logo {
-  width: 50%;
-  height: 60%;
+  width: 100%;
+  height: auto;
   position: relative;
   z-index: 2;
-  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+  filter: none;
   display: block;
   object-fit: contain;
 }
